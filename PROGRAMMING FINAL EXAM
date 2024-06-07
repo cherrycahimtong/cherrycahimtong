@@ -1,0 +1,247 @@
+package javaapplication17;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+public class CoffeeShop {
+    private static final String FILE_NAME = "coffee.txt";
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
+        while (true) {
+            System.out.println("\nCOFFEE SHOP MENU MANAGEMENT:");
+            System.out.println("1. Add Menu Item");
+            System.out.println("2. Display Menu Item");
+            System.out.println("3. Place Order");
+            System.out.println("4. Remove Menu Item");
+            System.out.println("5. Edit Menu Item");
+            System.out.println("6. Exit");
+            System.out.print("Choose an option: ");
+
+            int choice = scanner.nextInt();
+            scanner.nextLine();
+
+            switch (choice) {
+                case 1:
+                    addMenuItem(scanner);
+                    break;
+                case 2:
+                    displayMenuItem();
+                    break;
+                case 3:
+                    placeOrder(scanner);
+                    break;
+                case 4:
+                    removeMenuItem(scanner);
+                    break;
+                case 5:
+                    editMenuItemPrice(scanner);
+                    break;
+                case 6:
+                    System.out.println("Exiting...");
+                    return;
+                default:
+                    System.out.println("Invalid choice. Please try again.");
+            }
+        }
+    }
+
+    public static void addMenuItem(Scanner scanner) {
+        System.out.print("Enter new item name: ");
+        String itemName = scanner.nextLine();
+        System.out.print("Enter price (₱): ");
+        String price = scanner.nextLine();
+        System.out.print("Enter stock quantity: ");
+        int quantity = scanner.nextInt();
+        scanner.nextLine(); // Consume newline
+
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("menu.txt", true))) {
+            int itemNumber = getNextItemNumber();
+            bw.write(itemNumber + ". " + itemName + " - ₱" + price + " - " + quantity);
+            bw.newLine();
+            System.out.println("New item added to menu.");
+        } catch (IOException e) {
+            System.err.println("Error writing to menu file: " + e.getMessage());
+        }
+    }
+
+    public static void displayMenuItem() {
+        try (BufferedReader br = new BufferedReader(new FileReader("menu.txt"))) {
+            String line;
+            System.out.println("\nCoffee Shop Menu:");
+            while ((line = br.readLine()) != null) {
+                System.out.println(line);
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading menu file: " + e.getMessage());
+        }
+    }
+
+    public static void placeOrder(Scanner scanner) {
+        displayMenuItem();
+        System.out.print("Enter the number of the item you want to order: ");
+        int orderNumber = scanner.nextInt();
+        scanner.nextLine(); // Consume newline
+
+        String orderItem = getOrderItem(orderNumber);
+        if (orderItem != null) {
+            System.out.println("You ordered: " + orderItem);
+            if (updateInventory(orderNumber)) {
+                saveOrder(orderItem);
+            } else {
+                System.out.println("Sorry, the item is out of stock.");
+            }
+        } else {
+            System.out.println("Invalid order number.");
+        }
+    }
+
+    public static String getOrderItem(int orderNumber) {
+        try (BufferedReader br = new BufferedReader(new FileReader("menu.txt"))) {
+            String line;
+            int currentNumber = 1;
+            while ((line = br.readLine()) != null) {
+                if (currentNumber == orderNumber) {
+                    return line;
+                }
+                currentNumber++;
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading menu file: " + e.getMessage());
+        }
+        return null;
+    }
+
+    public static void saveOrder(String orderItem) {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("orders.txt", true))) {
+            bw.write(orderItem);
+            bw.newLine();
+            System.out.println("Order saved to orders.txt.");
+        } catch (IOException e) {
+            System.err.println("Error writing to orders file: " + e.getMessage());
+        }
+    }
+
+    public static void removeMenuItem(Scanner scanner) {
+        displayMenuItem();
+        System.out.print("Enter the number of the item to remove: ");
+        int itemNumber = scanner.nextInt();
+        scanner.nextLine(); // Consume newline
+
+        List<String> menuItems = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader("menu.txt"))) {
+            String line;
+            int currentNumber = 1;
+            while ((line = br.readLine()) != null) {
+                if (currentNumber != itemNumber) {
+                    menuItems.add(currentNumber + ". " + line.split("\\. ")[1]);
+                }
+                currentNumber++;
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading menu file: " + e.getMessage());
+            return;
+        }
+
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("menu.txt"))) {
+            for (int i = 0; i < menuItems.size(); i++) {
+                bw.write((i + 1) + ". " + menuItems.get(i).split("\\. ")[1]);
+                bw.newLine();
+            }
+            System.out.println("Item removed from menu.");
+        } catch (IOException e) {
+            System.err.println("Error writing to menu file: " + e.getMessage());
+        }
+    }
+
+    public static void editMenuItemPrice(Scanner scanner) {
+        displayMenuItem();
+        System.out.print("Enter the number of the item to edit: ");
+        int itemNumber = scanner.nextInt();
+        scanner.nextLine(); // Consume newline
+        System.out.print("Enter new price (₱): ");
+        String newPrice = scanner.nextLine();
+
+        List<String> menuItems = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader("menu.txt"))) {
+            String line;
+            int currentNumber = 1;
+            while ((line = br.readLine()) != null) {
+                if (currentNumber == itemNumber) {
+                    String[] parts = line.split(" - ");
+                    parts[1] = "₱" + newPrice;
+                    menuItems.add(String.join(" - ", parts));
+                } else {
+                    menuItems.add(line);
+                }
+                currentNumber++;
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading menu file: " + e.getMessage());
+            return;
+        }
+
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("menu.txt"))) {
+            for (String item : menuItems) {
+                bw.write(item);
+                bw.newLine();
+            }
+            System.out.println("Menu item price updated.");
+        } catch (IOException e) {
+            System.err.println("Error writing to menu file: " + e.getMessage());
+        }
+    }
+
+    public static boolean updateInventory(int orderNumber) {
+        List<String> menuItems = new ArrayList<>();
+        boolean itemUpdated = false;
+
+        try (BufferedReader br = new BufferedReader(new FileReader("menu.txt"))) {
+            String line;
+            int currentNumber = 1;
+            while ((line = br.readLine()) != null) {
+                if (currentNumber == orderNumber) {
+                    String[] parts = line.split(" - ");
+                    int quantity = Integer.parseInt(parts[2]);
+                    if (quantity > 0) {
+                        quantity--;
+                        parts[2] = String.valueOf(quantity);
+                        itemUpdated = true;
+                    }
+                    menuItems.add(String.join(" - ", parts));
+                } else {
+                    menuItems.add(line);
+                }
+                currentNumber++;
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading menu file: " + e.getMessage());
+            return false;
+        }
+
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("menu.txt"))) {
+            for (String item : menuItems) {
+                bw.write(item);
+                bw.newLine();
+            }
+        } catch (IOException e) {
+            System.err.println("Error writing to menu file: " + e.getMessage());
+            return false;
+        }
+
+        return itemUpdated;
+    }
+
+    public static int getNextItemNumber() {
+        int count = 0;
+        try (BufferedReader br = new BufferedReader(new FileReader("menu.txt"))) {
+            while (br.readLine() != null) {
+                count++;
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading menu file: " + e.getMessage());
+        }
+        return count + 1;
+    }
+}
